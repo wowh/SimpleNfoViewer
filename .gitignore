@@ -1,0 +1,7 @@
+*.ncb
+*.suo
+*.user
+Debug
+Release
+tmp
+_ReSharper*
