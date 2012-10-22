@@ -2,9 +2,9 @@
 //
 
 #include "stdafx.h"
-#include "ListPlugin.h"
 #include "cunicode.h"
-#include "nfo2txt.h"
+#include "ListPlugin.h"
+#include "NFOView.h"
 
 #define SupportedExtension1 L".nfo"
 #define SupportedExtension2 L".diz"
@@ -12,6 +12,7 @@
 
 HINSTANCE hinst;
 char ConfigFileName[MAX_PATH]="plugin.ini";  // Unused in this plugin, may be used to save data
+NFOView* viewWindow = NULL;
 
 BOOL APIENTRY DllMain(HANDLE hModule, 
                       DWORD  ul_reason_for_call, 
@@ -51,114 +52,40 @@ int __stdcall ListNotificationReceived(HWND ListWin,int Message,WPARAM wParam,LP
 
 HWND __stdcall ListLoadW(HWND ParentWin, WCHAR* FileToLoad, int ShowFlags)
 {
-	HWND hwnd;
-	RECT r;
-	DWORD w2;
-	char *pdata;
 	WCHAR *p;
+    HWND viewHandle = NULL;
 
 	if (ShowFlags & lcp_forceshow == 0) {  // don't check extension in this case!
-		p=wcsrchr(FileToLoad,'\\');
+		p = wcsrchr(FileToLoad, '\\');
 		if (!p)
 			return NULL;
-		p=wcsrchr(p,'.');
-		if (!p || (wcsicmp(p,SupportedExtension1)!=0 && wcsicmp(p,SupportedExtension2)!=0))
+		p = wcsrchr(p, '.');
+		if (!p || (wcsicmp(p, SupportedExtension1) != 0 && wcsicmp(p, SupportedExtension2) != 0))
 			return NULL;
 	}
 
-	GetClientRect(ParentWin,&r);
-	// Create window invisbile, only show when data fully loaded!
+    viewWindow = new NFOView(ParentWin);
 
-    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE, 
-						  ("EDIT"), 
-						  (""),
-						  WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY,
-						  r.left, r.top, r.right-r.left, r.bottom-r.top,
-					      ParentWin, NULL, hinst, NULL);
-	if (hwnd) {
-		PostMessage(ParentWin,WM_COMMAND,MAKELONG(lcp_ansi,itm_fontstyle),(LPARAM)hwnd);
+	if (viewWindow->GetViewHandle()) {
+        viewHandle = viewWindow->GetViewHandle();
 
-		HFONT hFont = CreateFontW(11,
-								  0,
-								  0,
-								  0,
-								  FW_DONTCARE,
-						          FALSE, FALSE, FALSE,
-								  DEFAULT_CHARSET,
-								  OUT_DEFAULT_PRECIS,
-								  CLIP_DEFAULT_PRECIS,
-							      DEFAULT_QUALITY,
-							      DEFAULT_PITCH,
-								  L"Lucida Console");
+		PostMessage(ParentWin, WM_COMMAND, MAKELONG(lcp_ansi,itm_fontstyle), (LPARAM)viewHandle);
 
-		SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
+    	viewWindow->SetFont(L"Lucida Console");
 			
-		BOOL loadRet = LoadFile(FileToLoad, hwnd);
+		bool loadRet = viewWindow->LoadFile(FileToLoad);
 
 		if (!loadRet) {
-			DestroyWindow(hwnd);
-			hwnd=NULL;
+			delete viewWindow;
+			viewHandle=NULL;
 		}
+        else
+        {
+    		ShowWindow(viewHandle, SW_SHOW);
+        }
 	}
 
-	if (hwnd)
-		ShowWindow(hwnd,SW_SHOW);
-	return hwnd;
-}
-
-BOOL __stdcall LoadFile(WCHAR* FileName, HWND NfoViewHandle)
-{
-	HANDLE fileHandle;
-	fileHandle = CreateFileW(FileName,  
-                             GENERIC_READ,
-                             FILE_SHARE_READ,
-                             NULL,
-                             OPEN_EXISTING,
-                             0,
-                             NULL);
-    if (INVALID_HANDLE_VALUE == fileHandle)
-    {
-        return false;
-    }
-
-    DWORD fileSize = GetFileSize(fileHandle, NULL);
-    if (0xFFFFFFFF == fileSize)
-    {
-        CloseHandle(fileHandle);
-        return false;
-    }
-
-    HANDLE heapHandle = GetProcessHeap();
-    void* fileContents = HeapAlloc(heapHandle, 
-                                   HEAP_ZERO_MEMORY,
-                                   fileSize + sizeof (wchar_t));
-    if (NULL == fileContents)
-    {
-        CloseHandle(fileHandle);
-        return false;
-    }
-   
-    DWORD bytesReaded;
-    if (!ReadFile(fileHandle, fileContents, fileSize, &bytesReaded, NULL))
-    {
-        CloseHandle(fileHandle);
-        return false;
-    }
-
-    if (IsTextUnicode(fileContents, fileSize, NULL))
-    {
-        SetWindowTextW(NfoViewHandle, (wchar_t*)fileContents);
-    }
-    else
-    {
-        std::wstring nfoText = nfo2txt((char*)fileContents, fileSize);
-        SetWindowTextW(NfoViewHandle, nfoText.c_str());
-    }
-
-    HeapFree(heapHandle, 0, fileContents);
-    CloseHandle(fileHandle);
-
-    return true;
+	return viewHandle;
 }
 
 HWND __stdcall ListLoad(HWND ParentWin,char* FileToLoad,int ShowFlags)
@@ -202,6 +129,7 @@ int _stdcall ListSearchText(HWND ListWin,char* SearchString,int SearchParameter)
 void __stdcall ListCloseWindow(HWND ListWin)
 {
 	DestroyWindow(ListWin);
+    delete viewWindow;
 	return;
 }
 

@@ -477,6 +477,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\NFOView.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -534,6 +538,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\NFOView.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\stdafx.h"
 				>
 			</File>
@@ -543,10 +551,6 @@
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 			>
 		</Filter>
-		<File
-			RelativePath=".\src\ReadMe.txt"
-			>
-		</File>
 	</Files>
 	<Globals>
 	</Globals>

@@ -1,10 +1,9 @@
+#ifndef NFO_TO_TXT_H
+#define NFO_TO_TXT_H
+
 #include <stdio.h>
 #include <string>
 #include <stdlib.h>
- 
-#define LINEWIDTH 80
- 
-std::wstring nfo2txt(char *fileContents, int fileSize);
  
 wchar_t conv_table[] = {
     /*  0*/ 0x0000, 0x263a, 0x263b, 0x2665, 0x2666,
@@ -86,3 +85,5 @@ std::wstring nfo2txt(char *fileContents, int fileSize)
  
 	return output;
 }
+
+#endif
