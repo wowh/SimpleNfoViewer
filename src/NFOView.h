@@ -20,6 +20,7 @@ public:
 
 private:
     void ChangeFont();
+    static LRESULT ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
     HWND         _windowHandle;

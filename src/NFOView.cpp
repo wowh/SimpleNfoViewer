@@ -5,6 +5,8 @@
 
 #define DEFAULT_FONT_SIZE 11
 
+WNDPROC EditProc;
+
 NFOView::NFOView(HWND parentWindow)
     :_fontSize(DEFAULT_FONT_SIZE), _windowHandle(NULL)
 {
@@ -21,6 +23,11 @@ NFOView::NFOView(HWND parentWindow)
                                     parentRect.right-parentRect.left,
                                     parentRect.bottom-parentRect.top,
                                     parentWindow, NULL, inst, NULL);
+
+    if (NULL != _windowHandle)
+    {
+        EditProc = (WNDPROC)SetWindowLongPtrW(_windowHandle, GWLP_WNDPROC, (LONG_PTR)ViewMessageProc);
+    }
 }
 
 NFOView::~NFOView()
@@ -98,7 +105,8 @@ void NFOView::ChangeFont()
 				       DEFAULT_PITCH,
                        _fontName.c_str());
 
-    SendMessage(_windowHandle, WM_SETFONT, (WPARAM)font, MAKELPARAM(TRUE, 0));}
+    SendMessage(_windowHandle, WM_SETFONT, (WPARAM)font, MAKELPARAM(TRUE, 0));
+}
 
 void NFOView::SetFont(std::wstring fontName)
 {
@@ -125,4 +133,19 @@ int NFOView::DecFontSize()
 
     ChangeFont();
     return _fontSize;
+}
+
+LRESULT NFOView::ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch(message)
+    {
+        case WM_LBUTTONDOWN:
+            break;
+        case WM_LBUTTONUP:
+            break;
+        case WM_RBUTTONDOWN:
+            break;
+    }
+
+    return CallWindowProc(EditProc, hwnd, message, wParam, lParam);
 }
