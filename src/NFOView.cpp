@@ -135,17 +135,55 @@ int NFOView::DecFontSize()
     return _fontSize;
 }
 
-LRESULT NFOView::ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
     {
         case WM_LBUTTONDOWN:
             break;
         case WM_LBUTTONUP:
+            CopySelectedText(hwnd);
             break;
         case WM_RBUTTONDOWN:
             break;
     }
 
     return CallWindowProc(EditProc, hwnd, message, wParam, lParam);
+}
+
+void NFOView::CopySelectedText(HWND hwnd)
+{
+    DWORD selStart;
+    DWORD selEnd;
+    SendMessage(hwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+
+    if (selEnd > selStart)
+    {
+        int textLength = GetWindowTextLengthW(hwnd);
+        if (textLength > 0)
+        {
+            HGLOBAL selTextHandle;
+            selTextHandle = GlobalAlloc(GHND, sizeof(wchar_t)*(selEnd - selStart + 1));
+
+            // copy selected text to memory
+            wchar_t* selText = (wchar_t*)GlobalLock(selTextHandle);
+            wchar_t* text = new wchar_t[textLength+1]();
+            GetWindowTextW(hwnd, text, textLength);
+            memcpy(selText, text+selStart, (selEnd-selStart)*sizeof(wchar_t));
+            delete [] text;
+            GlobalUnlock(selTextHandle);
+
+            // copy to clipboard
+            if (!OpenClipboard(hwnd))
+            { 
+                return;
+            }
+            EmptyClipboard();
+            SetClipboardData(CF_UNICODETEXT, selTextHandle);
+            CloseClipboard();
+        }
+    }
+    
+    // deselect text after copy
+    SendMessage(hwnd, EM_SETSEL, (WPARAM)-1, (LPARAM)0);
 }

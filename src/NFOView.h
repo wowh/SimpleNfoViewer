@@ -21,6 +21,7 @@ public:
 private:
     void ChangeFont();
     static LRESULT ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam);
+    static void CopySelectedText(HWND hwnd);
 
 private:
     HWND         _windowHandle;
