@@ -17,7 +17,7 @@ NFOView::NFOView(HWND parentWindow)
     _windowHandle = CreateWindowExW(WS_EX_CLIENTEDGE,
                                     L"EDIT",
                                     L"",
-                                    WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY,
+                                    WS_CHILD | WS_VISIBLE | WS_HSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY,
                                     parentRect.left, 
                                     parentRect.top,
                                     parentRect.right-parentRect.left,
@@ -87,6 +87,8 @@ bool NFOView::LoadFile(wchar_t *fileName)
     HeapFree(heapHandle, 0, fileContents);
     CloseHandle(fileHandle);
 
+    AfterLoadFile();
+
     return true;
 }
 
@@ -135,6 +137,29 @@ int NFOView::DecFontSize()
     return _fontSize;
 }
 
+void NFOView::AfterLoadFile(void)
+{
+    CheckScrollbar(_windowHandle);
+}
+
+void NFOView::CheckScrollbar(HWND windowHandle)
+{
+    int lineCount = SendMessage(windowHandle, EM_GETLINECOUNT, NULL, NULL);
+
+    RECT viewWindowRect;
+    GetClientRect(windowHandle, &viewWindowRect);
+
+    HDC viewWindowDC = GetDC(windowHandle);
+    HFONT hFont = (HFONT)SendMessage(windowHandle, WM_GETFONT, NULL, NULL);
+    SelectObject(viewWindowDC, hFont);
+    TEXTMETRICW tm;
+    GetTextMetricsW(viewWindowDC, &tm); 
+    ReleaseDC(windowHandle, viewWindowDC);
+
+    int lineCountOfViewWindow = viewWindowRect.bottom / tm.tmHeight;
+    ShowScrollBar(windowHandle, SB_VERT, lineCount > lineCountOfViewWindow);
+}
+
 LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
@@ -145,6 +170,9 @@ LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
             CopySelectedText(hwnd);
             break;
         case WM_RBUTTONDOWN:
+            break;
+        case WM_SIZE:
+            CheckScrollbar(hwnd);
             break;
     }
 
