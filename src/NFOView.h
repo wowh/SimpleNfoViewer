@@ -20,6 +20,7 @@ public:
 
 private:
     void AfterLoadFile(void);
+    void AfterChangeFont(void);
     void ChangeFont(void);
     static void CheckScrollbar(HWND hwnd);
     static LRESULT ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam);

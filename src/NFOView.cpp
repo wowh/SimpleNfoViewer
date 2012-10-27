@@ -92,7 +92,12 @@ bool NFOView::LoadFile(wchar_t *fileName)
     return true;
 }
 
-void NFOView::ChangeFont()
+void NFOView::AfterChangeFont(void)
+{
+    CheckScrollbar(_windowHandle);
+}
+
+void NFOView::ChangeFont(void)
 {
 	HFONT font = CreateFontW(_fontSize,
 				       0,
@@ -108,6 +113,8 @@ void NFOView::ChangeFont()
                        _fontName.c_str());
 
     SendMessage(_windowHandle, WM_SETFONT, (WPARAM)font, MAKELPARAM(TRUE, 0));
+
+    AfterChangeFont();
 }
 
 void NFOView::SetFont(std::wstring fontName)
@@ -144,8 +151,6 @@ void NFOView::AfterLoadFile(void)
 
 void NFOView::CheckScrollbar(HWND windowHandle)
 {
-    int lineCount = SendMessage(windowHandle, EM_GETLINECOUNT, NULL, NULL);
-
     RECT viewWindowRect;
     GetClientRect(windowHandle, &viewWindowRect);
 
@@ -156,8 +161,26 @@ void NFOView::CheckScrollbar(HWND windowHandle)
     GetTextMetricsW(viewWindowDC, &tm); 
     ReleaseDC(windowHandle, viewWindowDC);
 
+    // check vertical scrollbar
+    int lineCount = SendMessage(windowHandle, EM_GETLINECOUNT, NULL, NULL);
     int lineCountOfViewWindow = viewWindowRect.bottom / tm.tmHeight;
     ShowScrollBar(windowHandle, SB_VERT, lineCount > lineCountOfViewWindow);
+
+    int maxLineLength = 0;
+    for (int lineNum = 0; lineNum < lineCount; lineNum++)
+    {
+        int charIndex = SendMessage(windowHandle, EM_LINEINDEX, (WPARAM)lineNum, NULL);
+        if (-1 != charIndex)
+        {
+            int lineLength = SendMessage(windowHandle, EM_LINELENGTH, (WPARAM)charIndex, NULL);
+            if (lineLength > maxLineLength)
+            {
+                maxLineLength = lineLength;
+            }
+        }
+    }
+    int lineLengthOfViewWindow = viewWindowRect.right / tm.tmAveCharWidth;
+    ShowScrollBar(windowHandle, SB_HORZ, maxLineLength > lineLengthOfViewWindow);
 }
 
 LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
