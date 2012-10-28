@@ -25,6 +25,9 @@ private:
     static void CheckScrollbar(HWND hwnd);
     static LRESULT ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam);
     static void CopySelectedText(HWND hwnd);
+    static void DrawHyperlink(HWND hwnd);
+    static void DetectHyperlink(wchar_t* text, int textLength, int start, int end);
+    static int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
 
 private:
     HWND         _windowHandle;

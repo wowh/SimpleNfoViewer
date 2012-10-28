@@ -1,11 +1,29 @@
 #include "stdafx.h"
 #include "NFOView.h"
 
+#include <vector>
 #include "nfo2txt.h"
 
 #define DEFAULT_FONT_SIZE 11
+#define HYPERLINK_START_MAX_LENGTH 16
 
 WNDPROC EditProc;
+
+struct HyperlinkOffset
+{
+    int start;
+    int end;
+};
+
+static wchar_t HyperlinkStart[][HYPERLINK_START_MAX_LENGTH] =
+{
+    L"http://",
+    L"mailto:",
+    L"www."
+};
+
+typedef std::vector<HyperlinkOffset> HyperlinkOffsetVec;
+static HyperlinkOffsetVec hyperlinkOffsets; 
 
 NFOView::NFOView(HWND parentWindow)
     :_fontSize(DEFAULT_FONT_SIZE), _windowHandle(NULL)
@@ -147,6 +165,7 @@ int NFOView::DecFontSize()
 void NFOView::AfterLoadFile(void)
 {
     CheckScrollbar(_windowHandle);
+    DrawHyperlink(_windowHandle);
 }
 
 void NFOView::CheckScrollbar(HWND windowHandle)
@@ -166,6 +185,7 @@ void NFOView::CheckScrollbar(HWND windowHandle)
     int lineCountOfViewWindow = viewWindowRect.bottom / tm.tmHeight;
     ShowScrollBar(windowHandle, SB_VERT, lineCount > lineCountOfViewWindow);
 
+    // check horizontal scrollbar
     int maxLineLength = 0;
     for (int lineNum = 0; lineNum < lineCount; lineNum++)
     {
@@ -197,6 +217,14 @@ LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
         case WM_SIZE:
             CheckScrollbar(hwnd);
             break;
+        case WM_HSCROLL:
+        case WM_VSCROLL:
+            DrawHyperlink(hwnd);
+            break;
+        case WM_PAINT:
+            LRESULT result = CallWindowProc(EditProc, hwnd, message, wParam, lParam);
+            DrawHyperlink(hwnd);
+            return result;
     }
 
     return CallWindowProc(EditProc, hwnd, message, wParam, lParam);
@@ -237,4 +265,119 @@ void NFOView::CopySelectedText(HWND hwnd)
     
     // deselect text after copy
     SendMessage(hwnd, EM_SETSEL, (WPARAM)-1, (LPARAM)0);
+}
+
+void NFOView::DrawHyperlink(HWND hwnd)
+{
+    RECT viewWindowRect;
+    GetClientRect(hwnd, &viewWindowRect);
+    POINT leftTop = { viewWindowRect.left, viewWindowRect.top };
+    POINT rightBottom = { viewWindowRect.right, viewWindowRect.bottom };
+
+    int startCharIndex = LOWORD(SendMessage(hwnd, 
+                                            EM_CHARFROMPOS,
+                                            NULL,
+                                            MAKELPARAM(viewWindowRect.left, viewWindowRect.top)));
+    int endCharIndex = LOWORD(SendMessage(hwnd, 
+                                          EM_CHARFROMPOS,
+                                          NULL,
+                                          MAKELPARAM(viewWindowRect.right, viewWindowRect.bottom)));
+
+    int textLength = GetWindowTextLength(hwnd);
+    if (textLength == 0)
+    {
+        return;
+    }
+
+    wchar_t* text = new wchar_t[textLength+1]();
+    GetWindowTextW(hwnd, text, textLength);
+
+    DetectHyperlink(text, textLength, startCharIndex, endCharIndex);
+
+    HDC viewWindowDC = GetDC(hwnd);
+    HFONT hFont = (HFONT)SendMessage(hwnd, WM_GETFONT, NULL, NULL);
+    SelectObject(viewWindowDC, hFont);
+    SetBkMode(viewWindowDC, TRANSPARENT);
+    IntersectClipRect(viewWindowDC, viewWindowRect.left, viewWindowRect.top, viewWindowRect.right, viewWindowRect.bottom);
+    SetTextColor(viewWindowDC, RGB(0, 102, 204));
+    for (int i = 0; i < hyperlinkOffsets.size(); i++)
+    {
+        for (int charIndex  = hyperlinkOffsets[i].start; charIndex <= hyperlinkOffsets[i].end; charIndex++)
+        {
+            DWORD pos = SendMessage(hwnd, EM_POSFROMCHAR, (WPARAM)charIndex, NULL);
+            POINT charPt = {LOWORD(pos), HIWORD(pos)};    
+            TextOutW(viewWindowDC, charPt.x, charPt.y, text+charIndex, 1);
+        }
+    }
+
+    ReleaseDC(hwnd, viewWindowDC);
+
+    delete [] text;
+}
+
+bool IsHyperlinkStart(wchar_t* text, int textLength)
+{
+    for (int i = 0; i < sizeof(HyperlinkStart)/sizeof(HyperlinkStart[0]); i++)
+    {
+        int linkStartLen = wcslen(HyperlinkStart[i]);
+        if (textLength < linkStartLen)
+        {   continue; }    
+        if (0 == _wcsnicmp(HyperlinkStart[i], text, linkStartLen))
+        {   return true; }
+    }
+
+    return false;
+}
+
+void NFOView::DetectHyperlink(wchar_t* text, int textLength, int start, int end)
+{
+    hyperlinkOffsets.clear();
+
+    for (int i = 0; i < textLength + 1; i++)
+    {
+        int remainLen = textLength - i;
+
+        if (IsHyperlinkStart(text+i, remainLen))            
+        { 
+            HyperlinkOffset offset = {};
+            offset.start = i;
+            offset.end = DetectHyperlinkEnd(text, textLength, i+1);
+            i = offset.end;
+            hyperlinkOffsets.push_back(offset);
+        }
+    }
+}
+
+bool IsCharCanInHyperlink(wchar_t ch)
+{
+    if (ch >= 0x21 && ch <= 0x7e)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+int NFOView::DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset)
+{
+    for (int i = startOffset; i < textLength + 1; i++)
+    {
+        if (!IsCharCanInHyperlink(text[i]))
+        {
+            return i - 1;
+        }
+
+        if (IsHyperlinkStart(text+i, textLength-i))
+        {
+            if ((startOffset+1 >= wcslen(L"http://")) && 
+                (0 == _wcsnicmp(text+i-wcslen(L"http://"), 
+                                L"http://",
+                                wcslen(L"http://")))
+               )
+            { continue ;}
+            return i - 1;
+        }
+    }
+    
+    return textLength;
 }
