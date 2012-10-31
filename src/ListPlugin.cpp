@@ -66,8 +66,8 @@ HWND __stdcall ListLoadW(HWND ParentWin, WCHAR* FileToLoad, int ShowFlags)
 
     viewWindow = new NFOView(ParentWin);
 
-	if (viewWindow->GetViewHandle()) {
-        viewHandle = viewWindow->GetViewHandle();
+	if (viewWindow->GetHandle()) {
+        viewHandle = viewWindow->GetHandle();
 
 		PostMessage(ParentWin, WM_COMMAND, MAKELONG(lcp_ansi,itm_fontstyle), (LPARAM)viewHandle);
 

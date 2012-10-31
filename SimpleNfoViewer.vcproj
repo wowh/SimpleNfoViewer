@@ -401,6 +401,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath=".\src\ControlBase.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\cunicode.cpp"
 				>
 				<FileConfiguration
@@ -525,6 +529,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath=".\src\ControlBase.h"
+				>
+			</File>
 			<File
 				RelativePath=".\src\cunicode.h"
 				>

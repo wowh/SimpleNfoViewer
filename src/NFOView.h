@@ -3,7 +3,9 @@
 
 #include <string>
 
-class NFOView
+#include "ControlBase.h"
+
+class NFOView : public ControlBase
 {
 public:
     NFOView(HWND parentWindow);
@@ -16,7 +18,8 @@ public:
     int IncFontSize(void);
     int DecFontSize(void);
 
-    HWND GetViewHandle(void) { return _windowHandle; }
+protected:
+    LRESULT ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
     void AfterLoadFile(void);
@@ -30,7 +33,6 @@ private:
     static int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
 
 private:
-    HWND         _windowHandle;
     std::wstring _fontName;
     int          _fontSize;
 };

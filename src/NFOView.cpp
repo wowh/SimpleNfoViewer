@@ -7,8 +7,6 @@
 #define DEFAULT_FONT_SIZE 11
 #define HYPERLINK_START_MAX_LENGTH 16
 
-WNDPROC EditProc;
-
 struct HyperlinkOffset
 {
     int start;
@@ -26,13 +24,13 @@ typedef std::vector<HyperlinkOffset> HyperlinkOffsetVec;
 static HyperlinkOffsetVec hyperlinkOffsets; 
 
 NFOView::NFOView(HWND parentWindow)
-    :_fontSize(DEFAULT_FONT_SIZE), _windowHandle(NULL)
+    :_fontSize(DEFAULT_FONT_SIZE) 
 {
     RECT parentRect;
     GetClientRect(parentWindow, &parentRect);
     HINSTANCE inst = GetModuleHandle(0);
 
-    _windowHandle = CreateWindowExW(WS_EX_CLIENTEDGE,
+    _handle = CreateWindowExW(WS_EX_CLIENTEDGE,
                                     L"EDIT",
                                     L"",
                                     WS_CHILD | WS_VISIBLE | WS_HSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY,
@@ -42,15 +40,15 @@ NFOView::NFOView(HWND parentWindow)
                                     parentRect.bottom-parentRect.top,
                                     parentWindow, NULL, inst, NULL);
 
-    if (NULL != _windowHandle)
+    if (NULL != _handle)
     {
-        EditProc = (WNDPROC)SetWindowLongPtrW(_windowHandle, GWLP_WNDPROC, (LONG_PTR)ViewMessageProc);
+        RegisterControl(_handle);
     }
 }
 
 NFOView::~NFOView()
 {
-    DestroyWindow(_windowHandle);
+    DestroyWindow(_handle);
 }
 
 bool NFOView::LoadFile(wchar_t *fileName)
@@ -94,12 +92,12 @@ bool NFOView::LoadFile(wchar_t *fileName)
 
     if (IsTextUnicode(fileContents, fileSize, NULL))
     {
-        SetWindowTextW(_windowHandle, (wchar_t*)fileContents);
+        SetWindowTextW(_handle, (wchar_t*)fileContents);
     }
     else
     {
         std::wstring nfoText = nfo2txt((char*)fileContents, fileSize);
-        SetWindowTextW(_windowHandle, nfoText.c_str());
+        SetWindowTextW(_handle, nfoText.c_str());
     }
 
     HeapFree(heapHandle, 0, fileContents);
@@ -112,7 +110,7 @@ bool NFOView::LoadFile(wchar_t *fileName)
 
 void NFOView::AfterChangeFont(void)
 {
-    CheckScrollbar(_windowHandle);
+    CheckScrollbar(_handle);
 }
 
 void NFOView::ChangeFont(void)
@@ -130,7 +128,7 @@ void NFOView::ChangeFont(void)
 				       DEFAULT_PITCH,
                        _fontName.c_str());
 
-    SendMessage(_windowHandle, WM_SETFONT, (WPARAM)font, MAKELPARAM(TRUE, 0));
+    SendMessage(_handle, WM_SETFONT, (WPARAM)font, MAKELPARAM(TRUE, 0));
 
     AfterChangeFont();
 }
@@ -164,8 +162,8 @@ int NFOView::DecFontSize()
 
 void NFOView::AfterLoadFile(void)
 {
-    CheckScrollbar(_windowHandle);
-    DrawHyperlink(_windowHandle);
+    CheckScrollbar(_handle);
+    DrawHyperlink(_handle);
 }
 
 void NFOView::CheckScrollbar(HWND windowHandle)
@@ -203,7 +201,7 @@ void NFOView::CheckScrollbar(HWND windowHandle)
     ShowScrollBar(windowHandle, SB_HORZ, maxLineLength > lineLengthOfViewWindow);
 }
 
-LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
     {
@@ -222,12 +220,12 @@ LRESULT NFOView::ViewMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
             DrawHyperlink(hwnd);
             break;
         case WM_PAINT:
-            LRESULT result = CallWindowProc(EditProc, hwnd, message, wParam, lParam);
+            LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
             DrawHyperlink(hwnd);
             return result;
     }
 
-    return CallWindowProc(EditProc, hwnd, message, wParam, lParam);
+    return CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
 }
 
 void NFOView::CopySelectedText(HWND hwnd)
