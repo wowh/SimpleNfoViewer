@@ -26,10 +26,14 @@ private:
     void AfterChangeFont(void);
     void ChangeFont(void);
     void CheckScrollbar(void);
+    void CheckSelect(void);
     void CopySelectedText(void);
+
     void DrawHyperlink(void);
     void DetectHyperlink(wchar_t* text, int textLength, int start, int end);
     int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
+
+    void onSelectChanged(void);
 
 private:
     std::wstring _fontName;

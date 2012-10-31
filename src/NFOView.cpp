@@ -6,6 +6,8 @@
 
 #define DEFAULT_FONT_SIZE 11
 #define HYPERLINK_START_MAX_LENGTH 16
+#define TIMER_CHECK_SELECTED 1
+#define CHECK_SELECTED_INTERVAL 10
 
 struct HyperlinkOffset
 {
@@ -111,6 +113,8 @@ bool NFOView::LoadFile(wchar_t *fileName)
 void NFOView::AfterChangeFont(void)
 {
     CheckScrollbar();
+
+    SetTimer(_handle, TIMER_CHECK_SELECTED, CHECK_SELECTED_INTERVAL, NULL);
 }
 
 void NFOView::ChangeFont(void)
@@ -201,6 +205,21 @@ void NFOView::CheckScrollbar(void)
     ShowScrollBar(_handle, SB_HORZ, maxLineLength > lineLengthOfViewWindow);
 }
 
+void NFOView::CheckSelect(void)
+{
+    static DWORD prevStart = 0;
+    static DWORD prevEnd   = 0;
+
+    DWORD selStart;
+    DWORD selEnd;
+    SendMessage(_handle, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+
+    if (prevStart != selStart || prevEnd != selEnd)
+    {
+        onSelectChanged();
+    }
+}
+
 LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
@@ -218,6 +237,10 @@ LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPAR
         case WM_HSCROLL:
         case WM_VSCROLL:
             DrawHyperlink();
+            break;
+        case WM_TIMER:
+            if (wParam = TIMER_CHECK_SELECTED)
+                CheckSelect();
             break;
         case WM_PAINT:
             LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
@@ -298,12 +321,25 @@ void NFOView::DrawHyperlink(void)
     SetBkMode(viewWindowDC, TRANSPARENT);
     IntersectClipRect(viewWindowDC, viewWindowRect.left, viewWindowRect.top, viewWindowRect.right, viewWindowRect.bottom);
     SetTextColor(viewWindowDC, RGB(0, 102, 204));
+
+    DWORD selStart;
+    DWORD selEnd;
+    SendMessage(_handle, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+
     for (int i = 0; i < hyperlinkOffsets.size(); i++)
     {
         for (int charIndex  = hyperlinkOffsets[i].start; charIndex <= hyperlinkOffsets[i].end; charIndex++)
         {
             DWORD pos = SendMessage(_handle, EM_POSFROMCHAR, (WPARAM)charIndex, NULL);
             POINT charPt = {LOWORD(pos), HIWORD(pos)};    
+            // don't draw text that selected
+            if (selStart != selEnd && 
+                charIndex >= selStart &&
+                charIndex < selEnd)
+            {
+                continue;
+            }
+
             TextOutW(viewWindowDC, charPt.x, charPt.y, text+charIndex, 1);
         }
     }
@@ -378,4 +414,9 @@ int NFOView::DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset)
     }
     
     return textLength;
+}
+
+void NFOView::onSelectChanged(void)
+{
+    DrawHyperlink();
 }
