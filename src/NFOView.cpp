@@ -110,7 +110,7 @@ bool NFOView::LoadFile(wchar_t *fileName)
 
 void NFOView::AfterChangeFont(void)
 {
-    CheckScrollbar(_handle);
+    CheckScrollbar();
 }
 
 void NFOView::ChangeFont(void)
@@ -162,35 +162,35 @@ int NFOView::DecFontSize()
 
 void NFOView::AfterLoadFile(void)
 {
-    CheckScrollbar(_handle);
-    DrawHyperlink(_handle);
+    CheckScrollbar();
+    DrawHyperlink();
 }
 
-void NFOView::CheckScrollbar(HWND windowHandle)
+void NFOView::CheckScrollbar(void)
 {
     RECT viewWindowRect;
-    GetClientRect(windowHandle, &viewWindowRect);
+    GetClientRect(_handle, &viewWindowRect);
 
-    HDC viewWindowDC = GetDC(windowHandle);
-    HFONT hFont = (HFONT)SendMessage(windowHandle, WM_GETFONT, NULL, NULL);
+    HDC viewWindowDC = GetDC(_handle);
+    HFONT hFont = (HFONT)SendMessage(_handle, WM_GETFONT, NULL, NULL);
     SelectObject(viewWindowDC, hFont);
     TEXTMETRICW tm;
     GetTextMetricsW(viewWindowDC, &tm); 
-    ReleaseDC(windowHandle, viewWindowDC);
+    ReleaseDC(_handle, viewWindowDC);
 
     // check vertical scrollbar
-    int lineCount = SendMessage(windowHandle, EM_GETLINECOUNT, NULL, NULL);
+    int lineCount = SendMessage(_handle, EM_GETLINECOUNT, NULL, NULL);
     int lineCountOfViewWindow = viewWindowRect.bottom / tm.tmHeight;
-    ShowScrollBar(windowHandle, SB_VERT, lineCount > lineCountOfViewWindow);
+    ShowScrollBar(_handle, SB_VERT, lineCount > lineCountOfViewWindow);
 
     // check horizontal scrollbar
     int maxLineLength = 0;
     for (int lineNum = 0; lineNum < lineCount; lineNum++)
     {
-        int charIndex = SendMessage(windowHandle, EM_LINEINDEX, (WPARAM)lineNum, NULL);
+        int charIndex = SendMessage(_handle, EM_LINEINDEX, (WPARAM)lineNum, NULL);
         if (-1 != charIndex)
         {
-            int lineLength = SendMessage(windowHandle, EM_LINELENGTH, (WPARAM)charIndex, NULL);
+            int lineLength = SendMessage(_handle, EM_LINELENGTH, (WPARAM)charIndex, NULL);
             if (lineLength > maxLineLength)
             {
                 maxLineLength = lineLength;
@@ -198,7 +198,7 @@ void NFOView::CheckScrollbar(HWND windowHandle)
         }
     }
     int lineLengthOfViewWindow = viewWindowRect.right / tm.tmAveCharWidth;
-    ShowScrollBar(windowHandle, SB_HORZ, maxLineLength > lineLengthOfViewWindow);
+    ShowScrollBar(_handle, SB_HORZ, maxLineLength > lineLengthOfViewWindow);
 }
 
 LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -208,35 +208,35 @@ LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPAR
         case WM_LBUTTONDOWN:
             break;
         case WM_LBUTTONUP:
-            CopySelectedText(hwnd);
+            CopySelectedText();
             break;
         case WM_RBUTTONDOWN:
             break;
         case WM_SIZE:
-            CheckScrollbar(hwnd);
+            CheckScrollbar();
             break;
         case WM_HSCROLL:
         case WM_VSCROLL:
-            DrawHyperlink(hwnd);
+            DrawHyperlink();
             break;
         case WM_PAINT:
             LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
-            DrawHyperlink(hwnd);
+            DrawHyperlink();
             return result;
     }
 
     return CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
 }
 
-void NFOView::CopySelectedText(HWND hwnd)
+void NFOView::CopySelectedText(void)
 {
     DWORD selStart;
     DWORD selEnd;
-    SendMessage(hwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+    SendMessage(_handle, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
 
     if (selEnd > selStart)
     {
-        int textLength = GetWindowTextLengthW(hwnd);
+        int textLength = GetWindowTextLengthW(_handle);
         if (textLength > 0)
         {
             HGLOBAL selTextHandle;
@@ -245,13 +245,13 @@ void NFOView::CopySelectedText(HWND hwnd)
             // copy selected text to memory
             wchar_t* selText = (wchar_t*)GlobalLock(selTextHandle);
             wchar_t* text = new wchar_t[textLength+1]();
-            GetWindowTextW(hwnd, text, textLength);
+            GetWindowTextW(_handle, text, textLength);
             memcpy(selText, text+selStart, (selEnd-selStart)*sizeof(wchar_t));
             delete [] text;
             GlobalUnlock(selTextHandle);
 
             // copy to clipboard
-            if (!OpenClipboard(hwnd))
+            if (!OpenClipboard(_handle))
             { 
                 return;
             }
@@ -262,38 +262,38 @@ void NFOView::CopySelectedText(HWND hwnd)
     }
     
     // deselect text after copy
-    SendMessage(hwnd, EM_SETSEL, (WPARAM)-1, (LPARAM)0);
+    SendMessage(_handle, EM_SETSEL, (WPARAM)-1, (LPARAM)0);
 }
 
-void NFOView::DrawHyperlink(HWND hwnd)
+void NFOView::DrawHyperlink(void)
 {
     RECT viewWindowRect;
-    GetClientRect(hwnd, &viewWindowRect);
+    GetClientRect(_handle, &viewWindowRect);
     POINT leftTop = { viewWindowRect.left, viewWindowRect.top };
     POINT rightBottom = { viewWindowRect.right, viewWindowRect.bottom };
 
-    int startCharIndex = LOWORD(SendMessage(hwnd, 
+    int startCharIndex = LOWORD(SendMessage(_handle, 
                                             EM_CHARFROMPOS,
                                             NULL,
                                             MAKELPARAM(viewWindowRect.left, viewWindowRect.top)));
-    int endCharIndex = LOWORD(SendMessage(hwnd, 
+    int endCharIndex = LOWORD(SendMessage(_handle, 
                                           EM_CHARFROMPOS,
                                           NULL,
                                           MAKELPARAM(viewWindowRect.right, viewWindowRect.bottom)));
 
-    int textLength = GetWindowTextLength(hwnd);
+    int textLength = GetWindowTextLength(_handle);
     if (textLength == 0)
     {
         return;
     }
 
     wchar_t* text = new wchar_t[textLength+1]();
-    GetWindowTextW(hwnd, text, textLength);
+    GetWindowTextW(_handle, text, textLength);
 
     DetectHyperlink(text, textLength, startCharIndex, endCharIndex);
 
-    HDC viewWindowDC = GetDC(hwnd);
-    HFONT hFont = (HFONT)SendMessage(hwnd, WM_GETFONT, NULL, NULL);
+    HDC viewWindowDC = GetDC(_handle);
+    HFONT hFont = (HFONT)SendMessage(_handle, WM_GETFONT, NULL, NULL);
     SelectObject(viewWindowDC, hFont);
     SetBkMode(viewWindowDC, TRANSPARENT);
     IntersectClipRect(viewWindowDC, viewWindowRect.left, viewWindowRect.top, viewWindowRect.right, viewWindowRect.bottom);
@@ -302,13 +302,13 @@ void NFOView::DrawHyperlink(HWND hwnd)
     {
         for (int charIndex  = hyperlinkOffsets[i].start; charIndex <= hyperlinkOffsets[i].end; charIndex++)
         {
-            DWORD pos = SendMessage(hwnd, EM_POSFROMCHAR, (WPARAM)charIndex, NULL);
+            DWORD pos = SendMessage(_handle, EM_POSFROMCHAR, (WPARAM)charIndex, NULL);
             POINT charPt = {LOWORD(pos), HIWORD(pos)};    
             TextOutW(viewWindowDC, charPt.x, charPt.y, text+charIndex, 1);
         }
     }
 
-    ReleaseDC(hwnd, viewWindowDC);
+    ReleaseDC(_handle, viewWindowDC);
 
     delete [] text;
 }

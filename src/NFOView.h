@@ -25,12 +25,11 @@ private:
     void AfterLoadFile(void);
     void AfterChangeFont(void);
     void ChangeFont(void);
-    static void CheckScrollbar(HWND hwnd);
-    static LRESULT ViewMessageProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lParam);
-    static void CopySelectedText(HWND hwnd);
-    static void DrawHyperlink(HWND hwnd);
-    static void DetectHyperlink(wchar_t* text, int textLength, int start, int end);
-    static int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
+    void CheckScrollbar(void);
+    void CopySelectedText(void);
+    void DrawHyperlink(void);
+    void DetectHyperlink(wchar_t* text, int textLength, int start, int end);
+    int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
 
 private:
     std::wstring _fontName;
