@@ -553,6 +553,10 @@
 				RelativePath=".\src\stdafx.h"
 				>
 			</File>
+			<File
+				RelativePath=".\src\StructDefine.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

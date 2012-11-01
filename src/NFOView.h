@@ -4,6 +4,7 @@
 #include <string>
 
 #include "ControlBase.h"
+#include "StructDefine.h"
 
 class NFOView : public ControlBase
 {
@@ -30,7 +31,7 @@ private:
     void CopySelectedText(void);
 
     void DrawHyperlink(void);
-    void DetectHyperlink(wchar_t* text, int textLength, int start, int end);
+    void DetectHyperlink(void);
     int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
 
     void onSelectChanged(void);
@@ -38,6 +39,8 @@ private:
 private:
     std::wstring _fontName;
     int          _fontSize;
+    HyperlinkOffsetVec _hyperlinkOffsets;
+    std::wstring _nfoText;
 };
 
 #endif

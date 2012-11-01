@@ -9,21 +9,12 @@
 #define TIMER_CHECK_SELECTED 1
 #define CHECK_SELECTED_INTERVAL 10
 
-struct HyperlinkOffset
-{
-    int start;
-    int end;
-};
-
 static wchar_t HyperlinkStart[][HYPERLINK_START_MAX_LENGTH] =
 {
     L"http://",
     L"mailto:",
     L"www."
 };
-
-typedef std::vector<HyperlinkOffset> HyperlinkOffsetVec;
-static HyperlinkOffsetVec hyperlinkOffsets; 
 
 NFOView::NFOView(HWND parentWindow)
     :_fontSize(DEFAULT_FONT_SIZE) 
@@ -95,11 +86,12 @@ bool NFOView::LoadFile(wchar_t *fileName)
     if (IsTextUnicode(fileContents, fileSize, NULL))
     {
         SetWindowTextW(_handle, (wchar_t*)fileContents);
+        _nfoText.assign((const wchar_t*)fileContents, fileSize/sizeof(wchar_t));
     }
     else
     {
-        std::wstring nfoText = nfo2txt((char*)fileContents, fileSize);
-        SetWindowTextW(_handle, nfoText.c_str());
+        _nfoText = nfo2txt((char*)fileContents, fileSize);
+        SetWindowTextW(_handle, _nfoText.c_str());
     }
 
     HeapFree(heapHandle, 0, fileContents);
@@ -167,6 +159,7 @@ int NFOView::DecFontSize()
 void NFOView::AfterLoadFile(void)
 {
     CheckScrollbar();
+    DetectHyperlink();
     DrawHyperlink();
 }
 
@@ -292,28 +285,6 @@ void NFOView::DrawHyperlink(void)
 {
     RECT viewWindowRect;
     GetClientRect(_handle, &viewWindowRect);
-    POINT leftTop = { viewWindowRect.left, viewWindowRect.top };
-    POINT rightBottom = { viewWindowRect.right, viewWindowRect.bottom };
-
-    int startCharIndex = LOWORD(SendMessage(_handle, 
-                                            EM_CHARFROMPOS,
-                                            NULL,
-                                            MAKELPARAM(viewWindowRect.left, viewWindowRect.top)));
-    int endCharIndex = LOWORD(SendMessage(_handle, 
-                                          EM_CHARFROMPOS,
-                                          NULL,
-                                          MAKELPARAM(viewWindowRect.right, viewWindowRect.bottom)));
-
-    int textLength = GetWindowTextLength(_handle);
-    if (textLength == 0)
-    {
-        return;
-    }
-
-    wchar_t* text = new wchar_t[textLength+1]();
-    GetWindowTextW(_handle, text, textLength);
-
-    DetectHyperlink(text, textLength, startCharIndex, endCharIndex);
 
     HDC viewWindowDC = GetDC(_handle);
     HFONT hFont = (HFONT)SendMessage(_handle, WM_GETFONT, NULL, NULL);
@@ -326,9 +297,9 @@ void NFOView::DrawHyperlink(void)
     DWORD selEnd;
     SendMessage(_handle, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
 
-    for (int i = 0; i < hyperlinkOffsets.size(); i++)
+    for (int i = 0; i < _hyperlinkOffsets.size(); i++)
     {
-        for (int charIndex  = hyperlinkOffsets[i].start; charIndex <= hyperlinkOffsets[i].end; charIndex++)
+        for (int charIndex  = _hyperlinkOffsets[i].start; charIndex <= _hyperlinkOffsets[i].end; charIndex++)
         {
             DWORD pos = SendMessage(_handle, EM_POSFROMCHAR, (WPARAM)charIndex, NULL);
             POINT charPt = {LOWORD(pos), HIWORD(pos)};    
@@ -340,13 +311,11 @@ void NFOView::DrawHyperlink(void)
                 continue;
             }
 
-            TextOutW(viewWindowDC, charPt.x, charPt.y, text+charIndex, 1);
+            TextOutW(viewWindowDC, charPt.x, charPt.y, _nfoText.c_str()+charIndex, 1);
         }
     }
 
     ReleaseDC(_handle, viewWindowDC);
-
-    delete [] text;
 }
 
 bool IsHyperlinkStart(wchar_t* text, int textLength)
@@ -363,9 +332,13 @@ bool IsHyperlinkStart(wchar_t* text, int textLength)
     return false;
 }
 
-void NFOView::DetectHyperlink(wchar_t* text, int textLength, int start, int end)
+void NFOView::DetectHyperlink()
 {
-    hyperlinkOffsets.clear();
+    int textLength = GetWindowTextLength(_handle);
+    wchar_t* text = new wchar_t[textLength+1]();
+    GetWindowTextW(_handle, text, textLength);
+
+    _hyperlinkOffsets.clear();
 
     for (int i = 0; i < textLength + 1; i++)
     {
@@ -377,9 +350,11 @@ void NFOView::DetectHyperlink(wchar_t* text, int textLength, int start, int end)
             offset.start = i;
             offset.end = DetectHyperlinkEnd(text, textLength, i+1);
             i = offset.end;
-            hyperlinkOffsets.push_back(offset);
+            _hyperlinkOffsets.push_back(offset);
         }
     }
+
+    delete [] text;
 }
 
 bool IsCharCanInHyperlink(wchar_t ch)
