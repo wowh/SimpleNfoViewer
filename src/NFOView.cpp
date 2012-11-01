@@ -235,10 +235,19 @@ LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPAR
             if (wParam = TIMER_CHECK_SELECTED)
                 CheckSelect();
             break;
+        case WM_MOUSEMOVE:
+            {
+                LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
+                POINTS point = MAKEPOINTS(lParam);
+                onMouseMove(point);
+                return result;
+            }
         case WM_PAINT:
-            LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
-            DrawHyperlink();
-            return result;
+            {
+                LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
+                DrawHyperlink();
+                return result;
+            }
     }
 
     return CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
@@ -380,6 +389,36 @@ int NFOView::DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOf
     }
     
     return textLength;
+}
+
+bool NFOView::IsHyperlink(POINTS& point)
+{
+    int charIndex = LOWORD(SendMessage(_handle, EM_CHARFROMPOS, NULL, MAKELPARAM(point.x, point.y)));
+
+    for (int i = 0; i < _hyperlinkOffsets.size(); i++)
+    {
+        if (charIndex >= _hyperlinkOffsets[i].start &&
+            charIndex <= _hyperlinkOffsets[i].end)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void NFOView::onMouseMove(POINTS& point)
+{
+    if (IsHyperlink(point))
+    {
+        HCURSOR cursor = LoadCursor(NULL, IDC_HAND);
+        SetCursor(cursor);
+    }
+    else
+    {
+        HCURSOR cursor = LoadCursor(NULL, IDC_IBEAM);
+        SetCursor(cursor);
+    }
 }
 
 void NFOView::onSelectChanged(void)

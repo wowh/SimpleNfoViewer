@@ -34,6 +34,9 @@ private:
     void DetectHyperlink(void);
     int  DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOffset);
 
+    bool IsHyperlink(POINTS& point);
+
+    void onMouseMove(POINTS& point);
     void onSelectChanged(void);
 
 private:
