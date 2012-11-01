@@ -32,7 +32,7 @@ private:
 
     void DrawHyperlink(void);
     void DetectHyperlink(void);
-    int  DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset);
+    int  DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOffset);
 
     void onSelectChanged(void);
 

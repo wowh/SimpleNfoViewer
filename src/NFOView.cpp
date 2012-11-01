@@ -260,10 +260,7 @@ void NFOView::CopySelectedText(void)
 
             // copy selected text to memory
             wchar_t* selText = (wchar_t*)GlobalLock(selTextHandle);
-            wchar_t* text = new wchar_t[textLength+1]();
-            GetWindowTextW(_handle, text, textLength);
-            memcpy(selText, text+selStart, (selEnd-selStart)*sizeof(wchar_t));
-            delete [] text;
+            memcpy(selText, _nfoText.c_str()+selStart, (selEnd-selStart)*sizeof(wchar_t));
             GlobalUnlock(selTextHandle);
 
             // copy to clipboard
@@ -318,7 +315,7 @@ void NFOView::DrawHyperlink(void)
     ReleaseDC(_handle, viewWindowDC);
 }
 
-bool IsHyperlinkStart(wchar_t* text, int textLength)
+bool IsHyperlinkStart(const wchar_t* text, int textLength)
 {
     for (int i = 0; i < sizeof(HyperlinkStart)/sizeof(HyperlinkStart[0]); i++)
     {
@@ -334,27 +331,21 @@ bool IsHyperlinkStart(wchar_t* text, int textLength)
 
 void NFOView::DetectHyperlink()
 {
-    int textLength = GetWindowTextLength(_handle);
-    wchar_t* text = new wchar_t[textLength+1]();
-    GetWindowTextW(_handle, text, textLength);
-
     _hyperlinkOffsets.clear();
 
-    for (int i = 0; i < textLength + 1; i++)
+    for (int i = 0; i < _nfoText.length() + 1; i++)
     {
-        int remainLen = textLength - i;
+        int remainLen = _nfoText.length() - i;
 
-        if (IsHyperlinkStart(text+i, remainLen))            
+        if (IsHyperlinkStart(_nfoText.c_str()+i, remainLen))            
         { 
             HyperlinkOffset offset = {};
             offset.start = i;
-            offset.end = DetectHyperlinkEnd(text, textLength, i+1);
+            offset.end = DetectHyperlinkEnd(_nfoText.c_str(), _nfoText.length(), i+1);
             i = offset.end;
             _hyperlinkOffsets.push_back(offset);
         }
     }
-
-    delete [] text;
 }
 
 bool IsCharCanInHyperlink(wchar_t ch)
@@ -367,7 +358,7 @@ bool IsCharCanInHyperlink(wchar_t ch)
     return false;
 }
 
-int NFOView::DetectHyperlinkEnd(wchar_t* text, int textLength, int startOffset)
+int NFOView::DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOffset)
 {
     for (int i = startOffset; i < textLength + 1; i++)
     {
