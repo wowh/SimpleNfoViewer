@@ -392,6 +392,20 @@ int NFOView::DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOf
     return textLength;
 }
 
+std::wstring NFOView::GetHyperlinkAtPoint(POINTS& point)
+{
+    int charIndex = LOWORD(SendMessage(_handle, EM_CHARFROMPOS, NULL, MAKELPARAM(point.x, point.y)));
+
+    for (int i = 0; i < _hyperlinkOffsets.size(); i++)
+    {
+        if (charIndex >= _hyperlinkOffsets[i].start &&
+            charIndex <= _hyperlinkOffsets[i].end)
+        {
+            return _nfoText.substr(_hyperlinkOffsets[i].start, _hyperlinkOffsets[i].end - _hyperlinkOffsets[i].start + 1);
+        }
+    }
+}
+
 bool NFOView::IsHyperlink(POINTS& point)
 {
     int charIndex = LOWORD(SendMessage(_handle, EM_CHARFROMPOS, NULL, MAKELPARAM(point.x, point.y)));
@@ -410,6 +424,15 @@ bool NFOView::IsHyperlink(POINTS& point)
 
 void NFOView::OnLeftButtonDown(void)
 {
+    POINT point = {}; 
+    GetCursorPos(&point);
+    ScreenToClient(_handle, &point);
+    POINTS points = { point.x, point.y };
+    if (IsHyperlink(points))
+    {
+        std::wstring hyperlink = GetHyperlinkAtPoint(points);
+        ShellExecuteW(_handle, L"open", hyperlink.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    }
 }
 
 void NFOView::OnMouseMove(POINTS& point)

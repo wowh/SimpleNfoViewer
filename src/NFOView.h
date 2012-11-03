@@ -34,6 +34,7 @@ private:
     void DetectHyperlink(void);
     int  DetectHyperlinkEnd(const wchar_t* text, int textLength, int startOffset);
 
+    std::wstring GetHyperlinkAtPoint(POINTS& point);
     bool IsHyperlink(POINTS& point);
 
     void OnLeftButtonDown(void);
