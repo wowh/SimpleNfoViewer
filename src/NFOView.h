@@ -36,8 +36,9 @@ private:
 
     bool IsHyperlink(POINTS& point);
 
-    void onMouseMove(POINTS& point);
-    void onSelectChanged(void);
+    void OnLeftButtonDown(void);
+    void OnMouseMove(POINTS& point);
+    void OnSelectChanged(void);
 
 private:
     std::wstring _fontName;

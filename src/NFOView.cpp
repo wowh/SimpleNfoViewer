@@ -209,7 +209,7 @@ void NFOView::CheckSelect(void)
 
     if (prevStart != selStart || prevEnd != selEnd)
     {
-        onSelectChanged();
+        OnSelectChanged();
     }
 }
 
@@ -218,6 +218,7 @@ LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPAR
     switch(message)
     {
         case WM_LBUTTONDOWN:
+            OnLeftButtonDown();
             break;
         case WM_LBUTTONUP:
             CopySelectedText();
@@ -239,7 +240,7 @@ LRESULT NFOView::ControlMessageProc(HWND hwnd, UINT message, WPARAM wParam, LPAR
             {
                 LRESULT result = CallWindowProc(_oldProc, hwnd, message, wParam, lParam);
                 POINTS point = MAKEPOINTS(lParam);
-                onMouseMove(point);
+                OnMouseMove(point);
                 return result;
             }
         case WM_PAINT:
@@ -407,7 +408,11 @@ bool NFOView::IsHyperlink(POINTS& point)
     return false;
 }
 
-void NFOView::onMouseMove(POINTS& point)
+void NFOView::OnLeftButtonDown(void)
+{
+}
+
+void NFOView::OnMouseMove(POINTS& point)
 {
     DWORD selStart;
     DWORD selEnd;
@@ -427,7 +432,7 @@ void NFOView::onMouseMove(POINTS& point)
     }
 }
 
-void NFOView::onSelectChanged(void)
+void NFOView::OnSelectChanged(void)
 {
     DrawHyperlink();
 }
