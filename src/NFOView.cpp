@@ -409,7 +409,13 @@ bool NFOView::IsHyperlink(POINTS& point)
 
 void NFOView::onMouseMove(POINTS& point)
 {
-    if (IsHyperlink(point))
+    DWORD selStart;
+    DWORD selEnd;
+    SendMessage(_handle, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+
+    bool isSelecting = selEnd > selStart;
+
+    if (IsHyperlink(point) && !isSelecting)
     {
         HCURSOR cursor = LoadCursor(NULL, IDC_HAND);
         SetCursor(cursor);
